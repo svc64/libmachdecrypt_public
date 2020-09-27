@@ -272,7 +272,8 @@
 				OTHER_CFLAGS = "-masm=intel";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
-				STRIP_STYLE = debugging;
+				STRIPFLAGS = "-r -S -x";
+				STRIP_STYLE = all;
 			};
 			name = Debug;
 		};
@@ -299,7 +300,8 @@
 				OTHER_LDFLAGS = "-Wl,-mllvm,-enable-symobf";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
-				STRIP_STYLE = debugging;
+				STRIPFLAGS = "-r -S -x";
+				STRIP_STYLE = all;
 			};
 			name = Release;
 		};
