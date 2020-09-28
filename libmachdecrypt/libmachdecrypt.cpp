@@ -143,7 +143,6 @@ static void cryptText() {
                                 myMemCpy(&toEncrypt, (void *)(x+(uint64_t)macho), sizeof(uint32_t));
                                 toEncrypt = toEncrypt^cryptKey;
                                 myMemCpy((void *)(x+(uint64_t)macho), &toEncrypt, sizeof(uint32_t));
-                                
                             }
 #if DEBUG
                             goto end;
