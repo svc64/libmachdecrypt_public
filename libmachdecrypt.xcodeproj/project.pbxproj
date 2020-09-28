@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		450B1A022520EC310098FA3D /* libmachdecrypt.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 450B1A012520EC310098FA3D /* libmachdecrypt.cpp */; };
+		453AA2EC2521C72B00A7D2DC /* antidebug.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 453AA2EA2521C72B00A7D2DC /* antidebug.cpp */; };
+		453AA2ED2521C72B00A7D2DC /* antidebug.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 453AA2EB2521C72B00A7D2DC /* antidebug.hpp */; };
 		45D7F01A252128F7002865B6 /* antidebug.s in Sources */ = {isa = PBXBuildFile; fileRef = 45D7F019252128F7002865B6 /* antidebug.s */; };
 /* End PBXBuildFile section */
 
@@ -30,6 +32,9 @@
 /* Begin PBXFileReference section */
 		450B19FA2520EC310098FA3D /* liblibmachdecrypt.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = liblibmachdecrypt.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		450B1A012520EC310098FA3D /* libmachdecrypt.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = libmachdecrypt.cpp; sourceTree = "<group>"; };
+		453AA2EA2521C72B00A7D2DC /* antidebug.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = antidebug.cpp; sourceTree = "<group>"; };
+		453AA2EB2521C72B00A7D2DC /* antidebug.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = antidebug.hpp; sourceTree = "<group>"; };
+		453AA2EF2521C7EE00A7D2DC /* key.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = key.h; sourceTree = "<group>"; };
 		45D7F019252128F7002865B6 /* antidebug.s */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.asm; path = antidebug.s; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -65,6 +70,9 @@
 			children = (
 				450B1A012520EC310098FA3D /* libmachdecrypt.cpp */,
 				45D7F019252128F7002865B6 /* antidebug.s */,
+				453AA2EA2521C72B00A7D2DC /* antidebug.cpp */,
+				453AA2EB2521C72B00A7D2DC /* antidebug.hpp */,
+				453AA2EF2521C7EE00A7D2DC /* key.h */,
 			);
 			path = libmachdecrypt;
 			sourceTree = "<group>";
@@ -76,6 +84,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				453AA2ED2521C72B00A7D2DC /* antidebug.hpp in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -138,6 +147,7 @@
 			files = (
 				450B1A022520EC310098FA3D /* libmachdecrypt.cpp in Sources */,
 				45D7F01A252128F7002865B6 /* antidebug.s in Sources */,
+				453AA2EC2521C72B00A7D2DC /* antidebug.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

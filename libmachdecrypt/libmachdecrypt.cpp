@@ -18,11 +18,15 @@
 #include <sys/sysctl.h>
 #include <assert.h>
 #include <pthread.h>
+#include "antidebug.hpp"
+#include "key.h"
 extern void notmain() __asm__("main");
 void myMemCpy(void *dest, void *src, size_t n);
 static void integrityChecker();
 static void antiDebug();
-
+static void cryptText();
+bool textDecrypted = false;
+uint32_t cryptKey;
 void myMemCpy(void *dest, void *src, size_t n)
 {
    // Typecast src and dest addresses to (char *)
@@ -39,6 +43,12 @@ static void *integrityChecker(void* data) {
     while(&free) {
         sleep(5);
         antiDebug();
+        if(antidebug::AmIBeingDebugged()) {
+            // If we're being debugged, encrypt __text again to avoid someone dumping code
+            if(textDecrypted) {
+                cryptText();
+            }
+        }
     }
 }
 static void antiDebug() {
@@ -46,14 +56,8 @@ static void antiDebug() {
     printf("hi from antidebug\n");
     return;
 #endif
-    uint8_t denyAttach[] = { 0x50, 0x57, 0xBF, 0x1F, 0x00, 0x00, 0x00, 0xB8, 0x1A, 0x00, 0x00, 0x02, 0x0F, 0x05, 0x5F, 0x58 , 0xC3};
-    int err = vm_protect(mach_task_self(), (mach_vm_address_t)(notmain), sizeof(denyAttach), false, VM_PROT_ALL);
-#if DEBUG
-    if(err) {
-        printf("%s\n", mach_error_string(err));
-        abort();
-    }
-#endif
+    uint8_t denyAttach[] = { 0x50, 0x57, 0xBF, 0x1F, 0x00, 0x00, 0x00, 0xB8, 0x1A, 0x00, 0x00, 0x02, 0x0F, 0x05, 0x5F, 0x58 , 0xC3}; // calls ptrace
+    vm_protect(mach_task_self(), (mach_vm_address_t)(notmain), sizeof(denyAttach), false, VM_PROT_ALL);
     myMemCpy((void*)notmain, &denyAttach, sizeof(denyAttach));
     notmain();
 }
@@ -75,6 +79,10 @@ static void start()
 #if DEBUG
     printf("we run\n");
 #endif
+    cryptText();
+}
+static void cryptText() {
+    memcpy(&cryptKey, key, sizeof(uint32_t));
     void * macho = (void*)(_dyld_get_image_vmaddr_slide(0)+0x100000000);
     int32_t magic = MH_MAGIC_64;
     if(memcmp(macho, &magic, sizeof(MH_MAGIC_64))==0) {
@@ -121,7 +129,6 @@ static void start()
                                 abort();
                             }
 #endif
-                            uint32_t key = 0xc9a7c7d1;
 #if DEBUG
                             printf("your key: 0x%x\n", key);
 #endif
@@ -134,13 +141,18 @@ static void start()
 #endif
                                 uint32_t toEncrypt;
                                 myMemCpy(&toEncrypt, (void *)(x+(uint64_t)macho), sizeof(uint32_t));
-                                toEncrypt = toEncrypt^key;
+                                toEncrypt = toEncrypt^cryptKey;
                                 myMemCpy((void *)(x+(uint64_t)macho), &toEncrypt, sizeof(uint32_t));
                                 
                             }
 #if DEBUG
                             goto end;
 #endif
+                            if(textDecrypted==false) {
+                                textDecrypted=true;
+                            } else {
+                                textDecrypted=false;
+                            }
                             return;
                         }
                     }
