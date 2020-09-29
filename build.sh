@@ -1,3 +1,3 @@
 #!/bin/bash
-xcodebuild -configuration Release -toolchain com.naville.hikari
+xcodebuild -configuration Release
 strip -r -S -x ./build/Release/liblibmachdecrypt.dylib
