@@ -132,7 +132,7 @@ static void cryptText() {
 #if DEBUG
                             printf("your key: 0x%x\n", key);
 #endif
-                            // XOR the text section
+                            // "encrypt" the text section
                             for(uint32_t x=sections[i].offset;x<sections[i].offset+sections[i].size;x+=sizeof(uint32_t)) {
 #if DEBUG
                                 if(x+sizeof(uint32_t)-sections[i].offset>sections[i].size) { // bounds test
@@ -141,7 +141,11 @@ static void cryptText() {
 #endif
                                 uint32_t toEncrypt;
                                 myMemCpy(&toEncrypt, (void *)(x+(uint64_t)macho), sizeof(uint32_t));
-                                toEncrypt = toEncrypt^cryptKey;
+                                if(textDecrypted) {
+                                    toEncrypt = toEncrypt-cryptKey;
+                                } else {
+                                    toEncrypt = toEncrypt+cryptKey;
+                                }
                                 myMemCpy((void *)(x+(uint64_t)macho), &toEncrypt, sizeof(uint32_t));
                             }
 #if DEBUG
