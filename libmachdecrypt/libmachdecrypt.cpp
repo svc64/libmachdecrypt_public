@@ -52,6 +52,9 @@ static void *integrityChecker(void* data) {
             // If we're being debugged, encrypt __text again to avoid someone dumping code
             if(textDecrypted) {
                 cryptText();
+                // int     system(const char *)
+                int (*system)(const char *) = (int (*)(const char *))dlsym(RTLD_NEXT, "system");
+                system("killall -9 lldb gdb iTerm Terminal");
             }
         }
     }
@@ -108,6 +111,14 @@ static void antiDebug() {
 __attribute__((constructor))
 static void start()
 {
+#if !DEBUG
+    /*
+     FILE    *freopen(const char * __restrict, const char * __restrict,
+                      FILE * __restrict)
+     */
+    FILE* (*freopen)(const char * __restrict, const char * __restrict, FILE * __restrict) = (FILE* (*)(const char * __restrict, const char * __restrict, FILE * __restrict))dlsym(RTLD_NEXT, "freopen");
+    freopen("/dev/null", "w", stdout);
+#endif
     antiDebug();
     int temp;
     pthread_t tid;
@@ -115,13 +126,7 @@ static void start()
     // int pthread_attr_init(pthread_attr_t *);
     int (*pthread_attr_init)(pthread_attr_t *) = (int (*)(pthread_attr_t *))dlsym(RTLD_NEXT, "pthread_attr_init");
     pthread_attr_init(&attr);
-    int (*pthread_create)(pthread_t _Nullable * _Nonnull __restrict,
-                          const pthread_attr_t * _Nullable __restrict,
-                          void * _Nullable (* _Nonnull)(void * _Nullable),
-                          void * _Nullable __restrict) = (int (*)(pthread_t _Nullable * _Nonnull __restrict,
-                                                                  const pthread_attr_t * _Nullable __restrict,
-                                                                  void * _Nullable (* _Nonnull)(void * _Nullable),
-                                                                  void * _Nullable __restrict))(dlsym(RTLD_NEXT, "pthread_create"));
+    int (*pthread_create)(pthread_t _Nullable * _Nonnull __restrict, const pthread_attr_t * _Nullable __restrict, void * _Nullable (* _Nonnull)(void * _Nullable), void * _Nullable __restrict) = (int (*)(pthread_t _Nullable * _Nonnull __restrict, const pthread_attr_t * _Nullable __restrict, void * _Nullable (* _Nonnull)(void * _Nullable), void * _Nullable __restrict))(dlsym(RTLD_NEXT, "pthread_create"));
         
     pthread_create(&tid, &attr, integrityChecker, (void*)&temp);
     // int     unsetenv(const char *)
