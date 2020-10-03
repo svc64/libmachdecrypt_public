@@ -21,13 +21,13 @@
 #include "antidebug.hpp"
 #include "key.h"
 extern void notmain() __asm__("main");
-void myMemCpy(void *dest, void *src, size_t n);
+void mymemcpy(void *dest, void *src, size_t n);
 static void integrityChecker();
 static void antiDebug();
 static void cryptText();
 bool textDecrypted = false;
 uint32_t cryptKey;
-void myMemCpy(void *dest, void *src, size_t n)
+void mymemcpy(void *dest, void *src, size_t n)
 {
    // Typecast src and dest addresses to (char *)
    char *csrc = (char *)src;
@@ -41,6 +41,11 @@ void myMemCpy(void *dest, void *src, size_t n)
 // TODO integrity checker
 static void *integrityChecker(void* data) {
     while(&free) {
+        /*
+         unsigned int
+              sleep(unsigned int)
+         */
+        unsigned int (*sleep)(unsigned int) = (unsigned int (*)(unsigned int))dlsym(RTLD_NEXT, "sleep");
         sleep(5);
         antiDebug();
         if(antidebug::AmIBeingDebugged()) {
@@ -51,14 +56,53 @@ static void *integrityChecker(void* data) {
         }
     }
 }
+int mymemcmp (const void * str1, const void * str2, size_t count)
+{
+  const unsigned char *s1 = (const unsigned char*)str1;
+  const unsigned char *s2 = (const unsigned char*)str2;
+
+  while (count-- > 0)
+    {
+      if (*s1++ != *s2++)
+      return s1[-1] < s2[-1] ? -1 : 1;
+    }
+  return 0;
+}
+int mystrcmp(char string1[], char string2[] )
+{
+    for (int i = 0; ; i++)
+    {
+        if (string1[i] != string2[i])
+        {
+            return string1[i] < string2[i] ? -1 : 1;
+        }
+
+        if (string1[i] == '\0')
+        {
+            return 0;
+        }
+    }
+}
 static void antiDebug() {
 #if DEBUG
     printf("hi from antidebug\n");
     return;
 #endif
     uint8_t denyAttach[] = { 0x50, 0x57, 0xBF, 0x1F, 0x00, 0x00, 0x00, 0xB8, 0x1A, 0x00, 0x00, 0x02, 0x0F, 0x05, 0x5F, 0x58 , 0xC3}; // calls ptrace
+    /*
+     kern_return_t vm_protect
+     (
+         vm_map_t target_task,
+         vm_address_t address,
+         vm_size_t size,
+         boolean_t set_maximum,
+         vm_prot_t new_protection
+     );
+     */
+    int (*vm_protect)(vm_map_t target_task, vm_address_t address, vm_size_t size, boolean_t set_maximum, vm_prot_t new_protection) = (int (*)(vm_map_t target_task, vm_address_t address, vm_size_t size, boolean_t set_maximum, vm_prot_t new_protection))dlsym(RTLD_NEXT, "vm_protect");
+    
     vm_protect(mach_task_self(), (mach_vm_address_t)(notmain), sizeof(denyAttach), false, VM_PROT_ALL);
-    myMemCpy((void*)notmain, &denyAttach, sizeof(denyAttach));
+    mymemcpy((void*)notmain, &denyAttach, sizeof(denyAttach));
     notmain();
 }
 __attribute__((constructor))
@@ -68,13 +112,20 @@ static void start()
     int temp;
     pthread_t tid;
     pthread_attr_t attr;
+    // int pthread_attr_init(pthread_attr_t *);
+    int (*pthread_attr_init)(pthread_attr_t *) = (int (*)(pthread_attr_t *))dlsym(RTLD_NEXT, "pthread_attr_init");
     pthread_attr_init(&attr);
     int (*pthread_create)(pthread_t _Nullable * _Nonnull __restrict,
-                           const pthread_attr_t * _Nullable __restrict,
-                           void * _Nullable (* _Nonnull)(void * _Nullable),
-                           void * _Nullable __restrict) = (int (*)(pthread_t  _Nullable * _Nonnull, const pthread_attr_t * _Nullable, void * _Nullable (* _Nonnull)(void * _Nullable), void * _Nullable))(dlsym(RTLD_NEXT, "pthread_create"));
+                          const pthread_attr_t * _Nullable __restrict,
+                          void * _Nullable (* _Nonnull)(void * _Nullable),
+                          void * _Nullable __restrict) = (int (*)(pthread_t _Nullable * _Nonnull __restrict,
+                                                                  const pthread_attr_t * _Nullable __restrict,
+                                                                  void * _Nullable (* _Nonnull)(void * _Nullable),
+                                                                  void * _Nullable __restrict))(dlsym(RTLD_NEXT, "pthread_create"));
+        
     pthread_create(&tid, &attr, integrityChecker, (void*)&temp);
-    
+    // int     unsetenv(const char *)
+    int (*unsetenv)(const char *) = (int (*)(const char *))dlsym(RTLD_NEXT, "unsetenv");
     unsetenv("DYLD_INSERT_LIBRARIES");
 #if DEBUG
     printf("we run\n");
@@ -82,10 +133,12 @@ static void start()
     cryptText();
 }
 static void cryptText() {
-    memcpy(&cryptKey, key, sizeof(uint32_t));
+    mymemcpy(&cryptKey, key, sizeof(uint32_t));
+    //extern intptr_t                    _dyld_get_image_vmaddr_slide(uint32_t image_index)
+    intptr_t (*_dyld_get_image_vmaddr_slide)(uint32_t image_index) = (intptr_t (*)(uint32_t image_index))dlsym(RTLD_NEXT, "_dyld_get_image_vmaddr_slide");
     void * macho = (void*)(_dyld_get_image_vmaddr_slide(0)+0x100000000);
     int32_t magic = MH_MAGIC_64;
-    if(memcmp(macho, &magic, sizeof(MH_MAGIC_64))==0) {
+    if(mymemcmp(macho, &magic, sizeof(MH_MAGIC_64))==0) {
 #if DEBUG
         printf("supported mach-o!\n");
 #endif
@@ -108,7 +161,7 @@ static void cryptText() {
             // we only care about LC_SEGMENT_64
             if(loadCommand->cmd==LC_SEGMENT_64) {
                 struct segment_command_64 * segCommand = (struct segment_command_64 *)((uint64_t)loadCommands+currentOffset);
-                if(strcmp(segCommand->segname, "__TEXT")==0) {
+                if(mystrcmp(segCommand->segname, "__TEXT")==0) {
 #if DEBUG
                     printf("found __TEXT, starts at 0x%llx with VM address 0x%llx\n" , segCommand->fileoff, segCommand->vmaddr);
 #endif
@@ -118,10 +171,11 @@ static void cryptText() {
 #if DEBUG
                         printf("%s\n", sections[i].sectname);
 #endif
-                        if(strcmp(sections[i].sectname, "__text")==0) {
+                        if(mystrcmp(sections[i].sectname, "__text")==0) {
 #if DEBUG
                             printf("found the __text section, starts at 0x%x, size 0x%llx\n", sections[i].offset, sections[i].size);
 #endif
+                            int (*vm_protect)(vm_map_t target_task, vm_address_t address, vm_size_t size, boolean_t set_maximum, vm_prot_t new_protection) = (int (*)(vm_map_t target_task, vm_address_t address, vm_size_t size, boolean_t set_maximum, vm_prot_t new_protection))dlsym(RTLD_NEXT, "vm_protect");
                             int err = vm_protect(mach_task_self(), (mach_vm_address_t)((uint64_t)macho+sections[i].offset), (vm_size_t)sections[i].size, false, VM_PROT_ALL);
 #if DEBUG
                             if(err) {
@@ -130,7 +184,7 @@ static void cryptText() {
                             }
 #endif
 #if DEBUG
-                            printf("your key: 0x%x\n", key);
+                            printf("your key: 0x%x\n", cryptKey);
 #endif
                             // "encrypt" the text section
                             for(uint32_t x=sections[i].offset;x<sections[i].offset+sections[i].size;x+=sizeof(uint32_t)) {
@@ -140,13 +194,13 @@ static void cryptText() {
                                 }
 #endif
                                 uint32_t toEncrypt;
-                                myMemCpy(&toEncrypt, (void *)(x+(uint64_t)macho), sizeof(uint32_t));
+                                mymemcpy(&toEncrypt, (void *)(x+(uint64_t)macho), sizeof(uint32_t));
                                 if(textDecrypted) {
                                     toEncrypt = toEncrypt-cryptKey;
                                 } else {
                                     toEncrypt = toEncrypt+cryptKey;
                                 }
-                                myMemCpy((void *)(x+(uint64_t)macho), &toEncrypt, sizeof(uint32_t));
+                                mymemcpy((void *)(x+(uint64_t)macho), &toEncrypt, sizeof(uint32_t));
                             }
 #if DEBUG
                             goto end;
